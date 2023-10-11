@@ -1,0 +1,14 @@
+Last name: Xiao
+First Name: Naihe
+Student ID Number: 1006765038
+teach.cs login id: xiaonaih
+Contact email address: naihe.xiao@mail.utoronto.ca
+UG/Grad?: UG
+
+By submitting this file, I declare that my electronic submission is my
+own work, and is in accordance with the University of Toronto Code of
+Behaviour on Academic Matters and the Code of Student Conduct, as well
+as the collaboration policies of this course. I also acknowledge that
+I will refrain from sharing any assignment solution publicly perpetually
+upon the completion of this course.
+
