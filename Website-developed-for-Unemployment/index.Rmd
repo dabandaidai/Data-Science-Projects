@@ -1,0 +1,83 @@
+---
+title: "Predicting Unemployment Rate Using U.S Census Data"
+output: 
+    html_document:
+        toc: TRUE
+        toc_float: TRUE
+---
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE)
+```
+
+
+```{r setup, message=FALSE, echo=FALSE, warning=FALSE}
+library(data.table)
+library(tidyverse)
+library(dplyr)
+library(plotly)
+library(DT)
+library(ipumsr)
+library(knitr)
+library('httr')
+library('xml2')
+library(rvest)
+library('stringr')
+library('readr')
+library(tidytext)
+library(tidyr)
+library(stopwords)
+library(ggplot2)
+library(kableExtra)
+library(jsonlite)
+# INITALIZE CODE CHUNK OPTIONS
+opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  eval=TRUE,
+  echo = FALSE,
+  cache = FALSE)
+```
+
+<br>
+
+# Introduction
+
+<br>
+
+## Background
+
+<br>
+
+The unemployment rate is considered one of the most important economic indicators. It measures the share of workers in the labor force who do not currently have a job but are actively looking for work. However, the issue of unemployment is a significant concern that has garnered considerable attention in the United States, particularly in the wake of the pandemic. 
+
+Despite efforts to promote equal opportunities for all, disparities still exist between various demographic groups. According to BLS reports(https://www.bls.gov/opub/reports/race-and-ethnicity/2021/home.htm), the unemployment rate averaged 8.6 percent for Blacks, 8.2 percent for American Indians and Alaska Natives, 6.9 percent for Native Hawaiians and Other Pacific Islanders, 5.0 percent for Asians, and 4.7 percent for Whites. 
+
+![](pic.jpeg)
+
+<br>
+
+## Research Question
+
+<br>
+
+This study aims to perform a comprehensive investigation of employment data and its relationship with pertinent factors in the United States. Analyzing the underlying reasons for employment imbalances can provide insights into possible remedies for achieving a more equitable and fair society. The research question under scrutiny is whether a correlation exists between the unemployment rate and factors such as income or commute time.
+
+By conducting this analysis, we hope to shed light on the complex interplay of factors that influence employment in the United States. Through this understanding, we can work towards creating more effective policies and initiatives that promote greater economic and social equity for all Americans.
+
+<br>
+
+# Accessibility
+
+<br>
+
+The report can be accessed [click here](https://github.com/dabandaidai/Unemployment/blob/main/Report.pdf).
+
+A video presentation which explains this study can be seen [here]([https://youtube.com](https://www.youtube.com/watch?v=1H5Q0Uxw8Ok)).
+
+
+
+
+
+
+

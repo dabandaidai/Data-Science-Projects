@@ -1,0 +1,667 @@
+---
+title: "Methods and Analysis"
+output: 
+    html_document:
+        toc: TRUE
+        toc_float: TRUE
+---
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE)
+```
+
+```{r setup, message=FALSE, echo=FALSE, warning=FALSE}
+library(data.table)
+library(lmerTest)
+library(viridis)
+library(cowplot)
+library(reticulate)
+library(ggpubr)
+library(tidyverse)
+library(dplyr)
+library(plotly)
+library(DT)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(gbm)
+library(xgboost)
+library(ipumsr)
+library(knitr)
+library('httr')
+library(widgetframe)
+library('xml2')
+library(rvest)
+library('stringr')
+library('readr')
+library(tidytext)
+library(tidyr)
+library(stopwords)
+library(ggplot2)
+library(kableExtra)
+library(jsonlite)
+library(lme4)
+# INITALIZE CODE CHUNK OPTIONS
+opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  eval=TRUE,
+  echo = FALSE,
+  cache = FALSE,
+  fig.width = 7, 
+  fig.align = 'center',
+  fig.asp = 0.618,
+  out.width = "700px",
+  class.source = "code-r")
+```
+
+```{css, echo = FALSE}
+.code-r { /* Code block */
+  font-size: 15px;
+}
+
+.code-r-small { /* Code block */
+  font-size: 10px;
+}
+```
+
+<br>
+
+# Data Inspection
+
+<br>
+
+## Data source
+
+<br>
+
+Our data come from the DP03 and DP05 tables of the American Community Survey 5-year estimates, which provide detailed information on social, economic, and housing characteristics of the United States population at various geographic levels. Our objective is to explore the relationship between unemployment and variables such as gender, race, and income, as well as identify other underlying patterns that may impact the employment rate.
+```{r}
+kgl_dataset <- function(file_name){
+    url <- paste0( "https://www.kaggle.com/api/v1/datasets/download/muonneutrino/us-census-demographic-data/", file_name)
+    call <- httr::GET(url, httr::authenticate("naihexiao", "dc003e05b496db6674191ae798c58498", type="basic"))
+    content_type <- call[[3]]$`content-type`
+    temp <- tempfile()
+    download.file(call$url,temp)
+    data <- read.csv(unz(temp, file_name))
+    unlink(temp)
+    return(data)
+}
+data_2015 <- kgl_dataset("acs2015_census_tract_data.csv")
+data_2017 <- kgl_dataset("acs2017_census_tract_data.csv")
+```
+<br>
+
+## Data cleaning and wrangling
+
+<br>
+
+We utilized the Kaggle API to retrieve data in zip format and subsequently transformed it into R tables. Our dataset consists of census tract level observations, where a census tract is a designated geographic region for conducting a census. Typically, a county contains multiple tracts, and they serve as the smallest territorial unit for population data collection and dissemination in many countries. In the United States, census tracts are further divided into block groups and census blocks. After merging data from 2015 and 2017, our dataset encompasses 147,774 tracts, each with 38 variables.
+
+```{r}
+data_2015 <- data_2015 %>% rename(TractId = CensusTract)
+data_2015$year <- 2015
+data_2017$year <- 2017
+colnames(data_2017) <- colnames(data_2015)
+data <- rbind(data_2015, data_2017)
+```
+
+<br>
+
+### Select relevant variables and deal with missing values
+
+<br>
+
+The variables that are pertinent to our analysis have been identified, and their definitions along with the summary of missing values are presented in the table below:
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+data <- data[, c("TractId", "State", "County", "TotalPop", "Men", "Women", "Hispanic", "White", "Black", "Native", "Asian", "Pacific", "Income", "Unemployment", "year", "MeanCommute")]
+
+# Select columns of interest
+selected_cols <- c("TractId", "State", "County", "TotalPop", "Men", "Women", "Hispanic", "White", "Black", "Native", "Asian", "Pacific", "Income", "Unemployment", "year", "MeanCommute")
+
+# Define the table with column definitions
+table_df <- data.frame(
+  Column = selected_cols,
+  Definition = c(
+    "Census Tract ID",
+    "State name",
+    "County name",
+    "Total population",
+    "Number of men",
+    "Number of women",
+    "Percentage of Hispanic population",
+    "Percentage of White population",
+    "Percentage of Black population",
+    "Percentage of Native American population",
+    "Percentage of Asian population",
+    "Percentage of Pacific Islander population",
+    "Median household income",
+    "Unemployment rate",
+    "Year",
+    "Mean Commute Time in Minutes"
+  ),
+  Type = sapply(data[, selected_cols], class),
+  Missing = sapply(data[, selected_cols], function(x) sum(is.na(x)))
+)
+
+# Create the table using kableExtra
+table_out <- table_df %>%
+  mutate(
+    `Column Name` = paste0("`", Column, "`"),
+    `Data Type` = ifelse(Type == "numeric", "Numeric", "String"),
+    `Missing Values` = cell_spec(
+      Missing,
+      color = ifelse(Missing > 0, "red", "black"),
+      bold = ifelse(Missing > 0, TRUE, FALSE)
+    )
+  ) %>%
+  select(`Column Name`, Definition, `Data Type`, `Missing Values`) %>%
+  kable(
+    format = "html",
+    align = "c",
+    escape = FALSE,
+    caption = "Selected columns statistics"
+  ) %>%
+  kable_styling(
+    full_width = FALSE,
+    position = "center",
+    bootstrap_options = "striped"
+  )
+table_out
+```
+
+```{r, message=FALSE, echo=FALSE, warning=FALSE}
+data_no_na <- data %>% drop_na()
+```
+
+According to the summary table provided, we discovered that the dataset had a total of 6102 missing values. Specifically, the race columns had 1372 missing values each, while the income and unemployment columns had 2199 and 1600 missing values, respectively. To ensure the integrity and reliability of the analysis, we decided to eliminate all missing values in the dataset, given the significance of the aforementioned columns. Given the size of the dataset, we deemed this approach appropriate and not likely to significantly impact the analysis results. After removing the missing values, the dataset consisted of 145571 rows and 15 columns, allowing for a thorough and rigorous analysis.
+
+<br>
+
+### Data issues 
+
+<br>
+
+To ensure the accuracy and validity of the unemployment rate column, we conducted a thorough examination of the dataset by analyzing the observations with the highest and lowest unemployment rates. Our analysis revealed that there were two instances with unusually high unemployment rates (91.9 and 100) and 638 instances with abnormally low unemployment rates (0). To address this issue and prevent any potential inaccuracies, we opted to remove these extreme values. As a result, the dataset was reduced to 145154 tracts, which allowed for a more reliable and accurate analysis.
+```{r}
+data_no_na <- data_no_na %>%
+  filter(Unemployment != 0 & Unemployment != 91.9 & Unemployment != 100)
+```
+
+<br>
+
+# Exploratory plots and tables
+
+<br>
+
+To gain initial insights into the relationship between unemployment and our variables of interest, we will generate visualizations.
+
+```{r plot1, class.source="code-r-small"}
+# Create the histogram plot
+histogram <- ggplot(data_no_na, aes(x = Unemployment)) +
+  geom_histogram(binwidth = 0.5, fill = "#377eb8", color = "white") +
+  scale_x_continuous(breaks = seq(0, 50, by = 5), limits = c(0, 50)) +
+  scale_y_continuous(limits = c(0, 8000)) +
+  labs(title = "Histogram of Unemployment", x = "Unemployment Rate", y = "Frequency") +
+  theme_minimal() +
+  theme(
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 14, face = "bold"),
+    plot.title = element_text(size = 16, face = "bold"),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank()
+  )
+```
+
+```{r plot2, class.source="code-r-small"}
+# Create the boxplot plot
+boxplot <- ggplot(data_no_na, aes(y = Unemployment, fill = "Unemployment")) +
+  geom_boxplot(alpha = 0.5, color = "black") +
+  theme_pubr() +
+  labs(title = "Boxplot of Unemployment",
+       x = "Unemployment",
+       y = "") +
+  scale_fill_manual(values = c("#0072B2"), name = "") +
+  theme(legend.position = "none")
+```
+
+```{r plot3, class.source="code-r-small"}
+# Now the barplot
+mean_unemp <- data_no_na %>%
+  group_by(year) %>%
+  summarize(mean_unemployment = mean(Unemployment))
+
+barplot <- ggplot(mean_unemp, aes(x = year, y = mean_unemployment)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  labs(title = "Mean Unemployment Rate by Year",
+       x = "Year",
+       y = "Mean Unemployment Rate")
+```
+
+```{r plot4, class.source="code-r-small"}
+data <- data_no_na
+data$abb <- state.abb[match(data$State,state.name)]
+map <- plot_geo(
+  data,
+  locationmode = "USA-states"
+) %>% 
+  add_trace(
+    z = ~ Unemployment,
+    locations = ~ abb
+  ) %>% 
+  layout(
+    geo = list(
+      scope = "usa",
+      showlakes = TRUE,
+      lakecolor = toRGB("darkgrey")
+    )
+  )
+```
+
+<br>
+
+## Unemployment Visualizations {.tabset}
+
+<br>
+
+To gain initial insights into the distribution of our target variable, unemployment, we will generate a histogram, box plot, bar plot, and map visualizations. The map will display the unemployment rate across different states in the United States.
+
+
+### Histogram
+
+```{r p1}
+histogram
+```
+
+### Boxplot
+
+```{r p2}
+boxplot 
+```
+
+### Barplot
+
+```{r p3}
+barplot
+```
+
+### State Map
+```{r p4}
+map
+```
+
+
+## {-}
+
+* The histogram indicates that the distribution of the unemployment rate column is highly skewed and has a truncated right tail.
+* According to the boxplot, the median of the unemployment rate is around 8 percent, with most values falling between 0 to 10 percent. However, the dataset contains a significant number of outliers, which constitute 4.6 percent of the entire table. Despite the potential value of outliers in revealing important patterns, we opted to retain all observations in the analysis.
+* The barplot reveals a decline in the unemployment rate between 2015 (8.75%) and 2017 (6.4%), suggesting a positive trend in the U.S. labor market.
+* The map visualizes the distribution of the unemployment rate across states, which appears to be relatively uniform, ranging from 0 to 20 percent. Notably, states in the middle region exhibit lower unemployment rates than those in the southern and southeastern regions. Additionally, South Dakota stands out for having a significantly higher unemployment rate compared to other states.
+
+```{r}
+q <- quantile(data_no_na$Unemployment, c(0.25, 0.75), na.rm = TRUE)
+iqr <- q[2] - q[1]
+lower <- q[1] - 1.5 * iqr
+upper <- q[2] + 1.5 * iqr
+outliers <- sum(data_no_na$Unemployment < lower | data_no_na$Unemployment > upper, na.rm = TRUE)
+```
+
+<br>
+
+## Income and Unemployment
+
+<br>
+
+Intuition tells us that regions with higher average income tend to have lower unemployment rate. Let's take a look at a scatterplot between them to check if our intuition aligns with the reality:
+```{r}
+sort_by_pop <- data %>% 
+  arrange(desc(TotalPop))
+sort_by_pop <- head(sort_by_pop, 100)
+income_unemploy <- plot_ly(
+  sort_by_pop,
+  x = ~ Income,
+  y = ~ log(Unemployment),
+  color = ~ State,
+  size = ~ TotalPop,
+  mode = 'markers',
+  type = "scatter",
+  sizes = c(10, 40),
+  marker = list(sizemode = "diameter", 
+                opacity = .8),
+  hoverinfo = "text", 
+  text = ~ paste0(
+                  State, "\n",
+                  "   County: ", County, "\n",
+                  "   Men: ", Men, "\n",
+                  "   Women: ", Women, "\n",
+                  "   MeanCommute: ", MeanCommute
+                )
+)
+income_unemploy
+```
+The plot shows the relationship between the income and the log unemployment rate(since the histogram of unemployment shows heavy skewness) for the top 100 most populated states in the data frame, where each point contains information about the state, mean commute time, number of men and number of women in the tract, scaled by the total population of the state. This plot illustrate some interesting features:
+
+* There is one tract with particularly low unemployment rate, which is in ada county in Idaho. 
+* As the income increases, the unemployment rate seems to be a slight tendency of decreasing, especially when income is in the range from 40k to 100k.
+* There does not seem to be a relationship between the population of the tract and the unemployment rate according to the size of the balls: there are small balls and large balls in both high and low unemployment rate areas. 
+* California seems to contain most counties with the highest unemployment rates, while Texas contains most counties with relatively low unemployment rates.
+* States including Texas, Florida, and California contain the highest number of the most populated tracts.
+
+Now we create a simple heatmap to showcase the relationship between income and unemployment rate directly.
+```{r}
+heatmap <- ggplot(data_no_na, aes(x = Income, y = Unemployment)) +
+  geom_bin2d(bins = 20) +
+  scale_fill_viridis() +
+  labs(title = "Income and Unemployment Rate Heatmap",
+       x = "Income",
+       y = "Unemployment Rate")
+heatmap
+```
+The heatmap visualization indicates a noticeable pattern of a negative correlation between the unemployment rate and income level. Moreover, the majority of the population lies within the income range of 0 to 100,000 dollars and an unemployment rate range of 0 to 20 percent.
+
+To summarize this section, we discovered that there is indeed a negative relationship between annual salary and unemployment rate in the U.S, which we will consolidate later with a regression model. 
+
+```{r commute1, class.source="code-r-small"}
+plt_smooth <- ggplot(
+  sort_by_pop,
+  aes(x = MeanCommute, y = log(Unemployment))
+) +
+  geom_point(aes(colour = State, size = TotalPop)) + 
+  geom_smooth() +
+  theme_minimal() +
+  scale_x_continuous(trans = "log")
+interactive <- ggplotly(plt_smooth)
+```
+
+```{r commute2, class.source="code-r-small"}
+# Filter data for 2015 and 2017
+data_2015 <- subset(sort_by_pop, year == 2015)
+data_2017 <- subset(sort_by_pop, year == 2017)
+
+# Create scatterplot for 2015
+plt_2015 <- ggplot(data_2015, aes(x = MeanCommute, y = log(Unemployment))) +
+  geom_point(aes(color = State, size = TotalPop), alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  theme_minimal() +
+  scale_x_continuous(trans = "log") +
+  labs(title = "Unemployment Rate vs Mean Commute Time (2015)", x = "Mean Commute Time (log scale)", y = "Unemployment Rate (log scale)")
+```
+
+```{r commute3, class.source="code-r-small"}
+# Create scatterplot for 2017
+plt_2017 <- ggplot(data_2017, aes(x = MeanCommute, y = log(Unemployment))) +
+  geom_point(aes(color = State, size = TotalPop), alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  theme_minimal() +
+  scale_x_continuous(trans = "log") +
+  labs(title = "Unemployment Rate vs Mean Commute Time (2017)", x = "Mean Commute Time (log scale)", y = "Unemployment Rate (log scale)")
+```
+
+<br>
+
+## Commute Time and Unemployment {.tabset}
+
+<br>
+
+We will use an interactive scatterplot to showcase the relationship between the 2 variables in both years, and two simple scatterplots to inspect if there a difference between these two variable's correlation in different years. 
+
+
+### Interactive 
+
+```{r p5}
+interactive
+```
+
+### 2015 only  
+
+```{r p6}
+plt_2015
+```
+
+### 2017 only 
+
+```{r p7}
+plt_2017
+```
+
+## {-}
+
+Again, the plots focus on the top 100 most populated states. The first plot provides us with the following information:
+
+* Most state's average commute time is in the range of 20 to 40 minutes.
+* According to the fitted smoothed line, there are no monotone relationship between the mean commute time and unemployment rate. In fact, as the mean commute time increases from 0 to 18 minutes, the unemployment decreases; it fluctuates when the mean commute time increases from 20 minutes to 35 minutes, and from then on increases as the mean commute time increases.
+
+Different from the first visualization, the following two scatterplots show a positive correlation between the mean commute time and the unemployment rate in both years, but there are 2 notable differences:
+
+* the fitted line for 2015 is flatter than that of 2017, indicating a stronger association between the variables in 2017
+* the examples are more scattered in 2015, and relatively concentrated around the fitted line in 2017.
+
+We can not make any conclusions yet from the visualizations we created in this section. Hopefully we can obtain a more solid result in the modeling section.
+
+<br>
+
+# Modeling
+
+<br>
+
+After seeing some preliminary visualizations, let us conduct some quantitative analysis on the data.
+
+<br>
+
+## Correlation Test
+
+<br>
+
+```{r}
+p1 = cor.test(log(data$Unemployment), data$Income, method = "pearson")
+p2 = cor.test(log(data$Unemployment), data$Income, method = "spearman")
+p3 = cor.test(log(data$Unemployment), data$MeanCommute, method = "pearson")
+p4 = cor.test(log(data$Unemployment), data$MeanCommute, method = "spearman")
+p_value1 <- p1$p.value
+correlation1 <- p1$estimate
+p_value2 <- p2$p.value
+correlation2 <- p2$estimate
+p_value3 <- p3$p.value
+correlation3 <- p3$estimate
+p_value4 <- p4$p.value
+correlation4 <- p4$estimate
+```
+
+```{r}
+# Create a data frame to store the results
+df <- data.frame(
+  Variable1 = c("Income", "Income", "Mean Commute", "Mean Commute"),
+  Variable2 = c("Unemployment", "Unemployment", "Unemployment", "Unemployment"),
+  Method = c("Pearson", "Spearman", "Pearson", "Spearman"),
+  Correlation = c(correlation1, correlation2, correlation3, correlation4),
+  `P-value` = c(p_value1, p_value2, p_value3, p_value4)
+)
+
+kable(df, format = "html", align = "c", caption = "Correlation test results") %>%
+  kable_styling(bootstrap_options = "striped", full_width = FALSE)
+```
+
+The results are promising. Since we are using the pearson correlation test which assumes the variables to be normally distributed, we use a log transformation on the variable unemployment. The table reveals that, no matter what the method is, there is a median negative correlation between income and unemployment rate, and a slightly negative correlation between mean commute time and unemployment rate. Notice that all p-values are 0, indicating that the results are statistically significant. 
+
+<br>
+
+
+```{r}
+glm_model <- glm(Unemployment ~ Income + Men + Women + MeanCommute + Hispanic + White + Black + Native + Asian + Pacific, data = data, family = gaussian)
+lmer_model1 <- lmer(Unemployment ~ Income + MeanCommute + (1 | State), data = data)
+lmer_model2 <- lmer(Unemployment ~ Income + (Income | State), data = data)
+lmer_model3 <- lmer(Unemployment ~ MeanCommute + (MeanCommute | State), data = data)
+```
+
+```{r}
+# Make predictions using the four models
+glm_preds <- predict(glm_model, newdata = data)
+lmer_preds1 <- predict(lmer_model1, newdata = data)
+lmer_preds2 <- predict(lmer_model2, newdata = data)
+lmer_preds3 <- predict(lmer_model3, newdata = data)
+
+# Compute the prediction accuracy (RMSE) for each model
+glm_RMSE <- sqrt(mean((data$Unemployment - glm_preds)^2))
+lmer_RMSE1 <- sqrt(mean((data$Unemployment - lmer_preds1)^2))
+lmer_RMSE2 <- sqrt(mean((data$Unemployment - lmer_preds2)^2))
+lmer_RMSE3 <- sqrt(mean((data$Unemployment - lmer_preds3)^2))
+```
+
+```{r model1}
+# Extract model coefficients and p-values for Income
+glm_coef <- coef(summary(glm_model))
+glm_income_coef <- glm_coef["Income", "Estimate"]
+glm_income_pval <- glm_coef["Income", "Pr(>|t|)"]
+
+lmer_coef1 <- coef(summary(lmer_model1))
+lmer_income_coef1 <- lmer_coef1["Income", "Estimate"]
+lmer_income_pval1 <- lmer_coef1["Income", "Pr(>|t|)"]
+
+lmer_coef2 <- coef(summary(lmer_model2))
+lmer_income_coef2 <- lmer_coef2["Income", "Estimate"]
+lmer_income_pval2 <- lmer_coef2["Income", "Pr(>|t|)"]
+
+# Combine the coefficients and p-values into a data frame
+coef_df <- data.frame(
+  Model = c("generalized linear model", "linear mixed effects model(random intercept)", "linear mixed effects model(random slope)"),
+  RMSE = c(glm_RMSE, lmer_RMSE1, lmer_RMSE3),
+  Income_Coefficient = c(glm_income_coef, lmer_income_coef1, lmer_income_coef2),
+  Income_pvalue = c(glm_income_pval, lmer_income_pval1, lmer_income_pval2)
+)
+
+# Format the table using kableExtra
+table1 <- kbl(coef_df, align = "c") %>%
+  kable_styling(full_width = FALSE, position = "center") %>%
+  column_spec(1, bold = TRUE)
+
+```
+
+```{r model2}
+# Extract model coefficients and p-values for Income
+glm_coef <- coef(summary(glm_model))
+glm_commute_coef <- glm_coef["MeanCommute", "Estimate"]
+glm_commute_pval <- glm_coef["MeanCommute", "Pr(>|t|)"]
+
+lmer_coef1 <- coef(summary(lmer_model1))
+lmer_commute_coef1 <- lmer_coef1["MeanCommute", "Estimate"]
+lmer_commute_pval1 <- lmer_coef1["MeanCommute", "Pr(>|t|)"]
+
+lmer_coef2 <- coef(summary(lmer_model3))
+lmer_commute_coef2 <- lmer_coef2["MeanCommute", "Estimate"]
+lmer_commute_pval2 <- lmer_coef2["MeanCommute", "Pr(>|t|)"]
+
+# Combine the coefficients and p-values into a data frame
+coef_df2 <- data.frame(
+  Model = c("generalized linear model", "linear mixed effects model(random intercept)", "linear mixed effects model(random slope)"),
+  RMSE = c(glm_RMSE, lmer_RMSE1, lmer_RMSE3),
+  Commute_Coefficient = c(glm_commute_coef, lmer_commute_coef1, lmer_commute_coef2),
+  Commute_pvalue = c(glm_commute_pval, lmer_income_pval1, lmer_commute_pval2)
+)
+
+# Format the table using kableExtra
+table2 <- kbl(coef_df2, align = "c") %>%
+  kable_styling(full_width = FALSE, position = "center") %>%
+  column_spec(1, bold = TRUE)
+
+```
+
+
+## Regression model{.tabset}
+
+<br>
+
+Now let us create 4 regression models for the variables:
+
+* The first model is a generalized linear model containing every variable in the dataset, since we have several variables which are count data.
+* The second model is a random intercept model to examine the relationship between unemployment and the predictors Income and MeanCommute with a random intercept for each State. This model accounts for the potential correlation between observations within the same State, allowing for more accurate estimation of the fixed effects of Income and MeanCommute on Unemployment.
+* The third and fourth model are also mixed-effects model with Income and MeanCommute as predictors, respectively, but with a random slope which allows the relationship between the variables to vary across States, capturing heterogeneity in the effect of Income and MeanCommute on Unemployment across different regions.
+
+The outputs of the models are presented in the tables below
+
+### Income and Unemployment
+
+```{r t1}
+table1
+```
+
+### Mean Commute and Unemployment
+
+```{r t2}
+table2
+```
+
+## {-}
+
+The table for income indicates that there is indeed a slightly negative correlation between income and unemployment rate; specifically, the three models suggest that as the median annual salary in a region increases by 1 dollar, the average unemployment rate in that region decreases by 0.0000597, 0.0000958, 0.000113 percents, respectively. 
+
+On the other hand, the commute table implies a positive correlation between the mean commute time and the unemployment rate; specifically, the three models suggest that as the mean commute time in a region increases by 1 minute, the average unemployment rate in that region increases by 0.0749, 0.0993, and 0.0064 percents, respectively. 
+
+Meanwhile, all models yield small RMSE values and small p value(expect for the random slope models), hence the results can be considered significant.
+
+<br>
+
+## Classification model
+
+<br>
+
+Finally, we want to predict whether a region is highly unemployed or operating just fine. To evaluate this, we create a new binary variable "Jobless" which is 1 if the unemployment rate in that tract is higher than the mean unemployment rate, and 0 otherwise. 
+
+```{r}
+# Calculate the mean unemployment rate
+mean_unemployment <- mean(data$Unemployment)
+
+# Create a new binary variable
+data$Jobless <- ifelse(data$Unemployment > mean_unemployment, 1, 0)
+
+```
+
+<br>
+
+### Decision Tree
+
+<br>
+
+```{r}
+treefit <- rpart(Jobless ~ Income + Men + Women + MeanCommute + Hispanic + White + Black + Native + Asian + Pacific, data = data, method = "anova", control=list(maxdepth = 5, cp = 0))
+rpart.plot(treefit)
+```
+
+<br>
+
+### Random Forest
+
+<br>
+
+Now let us establish a random forest because it captures non-linear relationships and provides a measure of variable importance.
+
+```{r}
+Forest <- randomForest(as.factor(Jobless) ~ Income + Men + Women + MeanCommute + Hispanic + White + Black + Native + Asian + Pacific, data = data, na.action = na.omit)
+varImpPlot(Forest, main = "Importance Plot")
+```
+
+The importance plot above shows that income is a very strong predictor of unemployment, while commute time is relatively weaker. 
+
+```{r}
+# Make predictions using the random forest and decision tree models
+rf_preds <- predict(Forest, newdata = data)
+dt_preds <- predict(treefit, newdata = data)
+
+# Calculate the MSE for the random forest and decision tree models
+rf_mse <- mean((as.numeric(data$Jobless) - as.numeric(rf_preds))^2)
+dt_mse <- mean((data$Jobless - dt_preds)^2)
+```
+
+The mean squared error for the decision tree and the random forest are 0.1674157 and 1.0000207, respectively. Notice that the decision tree may have a smaller MSE due to overfitting, since we are computing the MSE using our original data as new data.
+
+
+
+
+
+
+
+
+
+
+
+
