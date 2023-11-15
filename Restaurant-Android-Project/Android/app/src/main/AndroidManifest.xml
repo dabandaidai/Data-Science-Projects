@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.example.android">
+
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+
+    <application
+            android:allowBackup="false"
+            android:fullBackupContent="@xml/backup_rules"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:supportsRtl="true"
+            android:theme="@style/Theme.AndroidGUI">
+        <activity android:name="com.example.android.menu_activities.EditCaloriesActivity">
+        </activity>
+        <activity android:name="com.example.android.menu_activities.EditPriceActivity">
+        </activity>
+        <activity android:name="com.example.android.menu_activities.SelectPriceOrCaloriesActivity">
+        </activity>
+        <activity android:name="com.example.android.user_activities.SeeUserActivity"/>
+        <activity android:name="com.example.android.inventory_activities.UpdateQuantityActivity"/>
+        <activity android:name="com.example.android.inventory_activities.UpdateFreshnessActivity"/>
+        <activity android:name="com.example.android.inventory_activities.AddInventoryActivity"/>
+        <activity android:name="com.example.android.inventory_activities.CheckInventoryActivity"/>
+        <activity android:name="com.example.android.inventory_activities.InventoryStarterActivity"/>
+        <activity
+                android:name="com.example.android.inventory_activities.PresentInventoryActivity"
+                android:exported="true"/>
+        <activity android:name="com.example.android.user_activities.EnrollStaffActivity"/>
+        <activity
+                android:name="com.example.android.menu_activities.SelectEditOrDeleteActivity"
+                android:exported="true"/>
+        <activity
+                android:name="com.example.android.review_activities.SeeReviewActivity"
+                android:exported="true"/>
+        <activity
+                android:name="com.example.android.review_activities.DeleteReviewActivity"
+                android:exported="true"/>
+        <activity
+                android:name="com.example.android.manager_activities.ManagerPickActionActivity"
+                android:exported="true"/>
+        <activity
+                android:name="com.example.android.menu_activities.ManageMenuActivity"
+                android:exported="true"/>
+        <activity
+                android:name="com.example.android.kitchen_activities.CurrentOrderDishesActivity"
+                android:exported="true"/>
+        <activity android:name="com.example.android.serving_staff_activities.ServeDishActivity"/>
+        <activity
+                android:name="com.example.android.delivery_staff_activities.DeliverOrderActivity"
+                android:exported="true"
+                android:label="@string/title_activity_deliver_order"
+                android:theme="@style/Theme.AndroidGUI.NoActionBar"/>
+        <activity
+                android:name="com.example.android.user_activities.LoginActivity"
+                android:exported="true"/>
+        <activity
+                android:name="com.example.android.order_activities.SelectDineInTakeOutActivity"
+                android:exported="true"/>
+        <activity
+                android:name="com.example.android.order_activities.EnterLocationActivity"
+                android:exported="true"/>
+        <activity
+                android:name="com.example.android.order_activities.PlaceOrderActivity"
+                android:exported="true"/>
+        <activity
+                android:name="com.example.android.menu_activities.SeeMenuActivity"
+                android:exported="true"/>
+        <activity
+                android:name="com.example.android.order_activities.EditOrderActivity"
+                android:exported="true"/>
+        <activity
+                android:name="com.example.android.review_activities.AddReviewCommentActivity"
+                android:exported="true"/>
+        <activity android:name="com.example.android.customer_activities.CustomerPickActionActivity"/>
+        <activity android:name="com.example.android.serving_staff_activities.ServingStaffPickActionActivity"/>
+        <activity android:name="com.example.android.delivery_staff_activities.DeliveryStaffPickActionActivity"/>
+        <activity
+                android:name="com.example.android.MainActivity"
+                android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
