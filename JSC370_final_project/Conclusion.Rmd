@@ -1,0 +1,43 @@
+---
+title: "Conclusion and Discussion"
+output: 
+    html_document:
+        toc: TRUE
+        toc_float: TRUE
+---
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE)
+```
+
+<br>
+
+# Conclusion
+
+<br>
+
+The present study leverages the American Community Survey 5-year estimates dataset to investigate the correlation between unemployment rate and various factors, such as income and commute time. Through the utilization of interactive visualizations and tables, our analysis reveals a potential negative correlation between income and unemployment rate, as well as a positive correlation between commute time and unemployment rate. These findings are further validated by the construction of four models, all of which exhibit promising results.
+
+In addition, we employed a decision tree and a random forest to classify regions that may be experiencing unemployment issues, both of which achieved state-of-the-art performances. Overall, this study contributes to the understanding of the relationship between unemployment rate and various socio-economic factors in the U.S. The results may be utilized to inform policy decisions aimed at reducing unemployment rates and promoting economic growth.
+
+<br>
+
+# Limitations and Improvements
+
+<br>
+
+This study has some limitations that need to be acknowledged. 
+
+* Firstly, all the data used in this study were collected prior to the outbreak of the COVID-19 pandemic, which has had a profound impact on the economic landscape and labor market in the United States. Therefore, the current unemployment situation may be significantly different from what is presented in our study, and our results and models may not be directly applicable to the current societal context.
+
+* Secondly, the visualizations created in this study only utilized data from the 100 most populated states, which could potentially affect the accuracy and generalizability of our findings. Although this approach improved the interpretability and aesthetics of our graphs, it may not provide the most representative reflection of the variable relationships.
+
+These limitations should be taken into account when interpreting the results and conclusions of this study, and further research is warranted to investigate the impact of the COVID-19 pandemic on the relationships between unemployment, income, and commute time in the United States.
+
+
+
+
+
+
+
+
