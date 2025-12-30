@@ -1,0 +1,14 @@
+column_name,dtype,semantic_type,min_value,max_value,reason
+ParticipantResearchID_Synthetic,int64,unknown,NA,NA,Could not parse JSON
+AgeAtEnrollment,int64,unknown,NA,NA,Could not parse JSON
+GenderName,object,unknown,NA,NA,Could not parse JSON
+MaritalStatusName,object,unknown,NA,NA,Could not parse JSON
+RaceName,object,unknown,NA,NA,Could not parse JSON
+EthnicityName,object,unknown,NA,NA,Could not parse JSON
+PreferredLanguageName,object,unknown,NA,NA,Could not parse JSON
+ICD10.integer_NEW,int64,unknown,NA,NA,Could not parse JSON
+Sum_AEB,float64,unknown,NA,NA,Could not parse JSON
+Sum_Frequency,int64,unknown,NA,NA,Could not parse JSON
+Sum_hours,float64,unknown,NA,NA,Could not parse JSON
+Height_mean,float64,unknown,NA,NA,Could not parse JSON
+Weight_mean,float64,unknown,NA,NA,Could not parse JSON
