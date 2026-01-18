@@ -1,6 +1,7 @@
-# Data Science Projects
+# Naihe Xiao
+Welcome! I am a data scientist and machine learning engineer with experience in healthcare, finance, and large-scale data systems.
 
-Welcome! This repository contains a collection of my data science and machine learning projects.  
+This repository contains a collection of my data science and machine learning projects.  
 These projects showcase my work in data processing, analytics, machine learning, workflow automation, and model development.
 
 Due to confidentiality, some of my most impactful industry and research projects cannot be shared here.  
