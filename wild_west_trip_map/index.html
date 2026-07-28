@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Wild West Road Trip Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#2563eb" />
+  <meta name="apple-mobile-web-app-title" content="Wild West" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+</head>
+
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h1>Wild West Road Trip</h1>
+
+      <label for="daySelect">Select day</label>
+      <select id="daySelect"></select>
+
+      <div id="details">
+        <h2>Monday, Sept 7</h2>
+        <p>Select a route section on the map to see details here.</p>
+      </div>
+    </aside>
+
+    <main id="map"></main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="tripData.js"></script>
+  <script src="app.js"></script>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./service-worker.js")
+          .catch(error => {
+            console.warn("Service worker registration failed:", error);
+          });
+      });
+    }
+  </script>
+  </body>
+</html>
